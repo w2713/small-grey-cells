@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h2>Последние заметки</h2>
+        {% for note in notes %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">{{ note.title }}</h5>
+                <p class="card-text">{{ note.content|truncate(100) }}</p>
+                <div class="d-flex justify-content-between">
+                    <small class="text-muted">{{ note.created_at.strftime('%d.%m.%Y') }}</small>
+                    <div>
+                        {% for tag in note.tags %}
+                        <span class="badge bg-secondary me-1">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info">Пока нет заметок</div>
+        {% endfor %}
+    </div>
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">Категории</div>
+            <ul class="list-group list-group-flush">
+                <!-- Категории будут динамически подгружаться -->
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-header">Облако тегов</div>
+            <div class="card-body">
+                <!-- Теги будут динамически подгружаться -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
