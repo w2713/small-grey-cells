@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="alert alert-danger mt-5">
+    <h2>Ошибка подключения к базе данных</h2>
+    <p>Не удалось подключиться к MongoDB. Пожалуйста, проверьте:</p>
+    <ul>
+        <li>Запущен ли сервер MongoDB</li>
+        <li>Правильно ли указан URI подключения в .env файле</li>
+        <li>Доступность сервера по сети</li>
+    </ul>
+    <p>Текущий URI: {{ config.MONGO_URI }}</p>
+    <hr>
+    <p class="mb-0">После исправления ошибки перезапустите приложение.</p>
+</div>
+{% endblock %}
