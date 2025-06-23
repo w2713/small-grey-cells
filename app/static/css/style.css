@@ -14,3 +14,17 @@ body {
 .card:hover {
     transform: translateY(-5px);
 }
+
+/* Стили для профиля */
+.card {
+    border-radius: 10px;
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.form-control:disabled {
+    background-color: #f8f9fa;
+    opacity: 1;
+}

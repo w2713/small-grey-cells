@@ -2,6 +2,7 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from bson import ObjectId
 from pymongo.errors import PyMongoError
+from datetime import datetime
 
 
 class User(UserMixin):
@@ -38,7 +39,8 @@ def create_user(db, name, email, password):
         result = db.users.insert_one({
             'name': name,
             'email': email,
-            'password_hash': password_hash
+            'password_hash': password_hash,
+            'created_at': datetime.utcnow()  # Добавляем дату создания
         })
         return str(result.inserted_id)
     except PyMongoError as e:
@@ -57,3 +59,23 @@ def load_user(app, user_id):
         return None
     except PyMongoError:
         return None
+
+
+
+def update_user(db, user_id, update_data):
+    try:
+        result = db.users.update_one(
+            {'_id': ObjectId(user_id)},
+            {'$set': update_data}
+        )
+        return result.modified_count > 0
+    except Exception as e:
+        print(f"Update user error: {str(e)}")
+        return False
+
+
+
+@property
+def created_at(self):
+    # Добавьте это поле в вашу MongoDB коллекцию users
+    return self.user_data.get('created_at')
