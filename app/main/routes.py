@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, current_
 from flask_login import login_required, current_user, login_user
 from werkzeug.security import generate_password_hash
 
-from models.user import User
+from ..models import User
 from .forms import ProfileForm
 
 # Создаем Blueprint с уникальным именем

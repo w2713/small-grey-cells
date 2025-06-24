@@ -40,7 +40,7 @@ def create_user(db, name, email, password):
             'name': name,
             'email': email,
             'password_hash': password_hash,
-            'created_at': datetime.utcnow()  # Добавляем дату создания
+            'created_at': datetime.utcnow()
         })
         return str(result.inserted_id)
     except PyMongoError as e:
