@@ -31,17 +31,26 @@ def profile_view():
     # Обработка GET-запроса или невалидной формы
     if not form.validate_on_submit():
         form.name.data = current_user.name  # Заполняем форму текущими данными
+        print(current_user.name)
         return render_template('main/profile.html', form=form)
 
     # Обработка POST-запроса с валидными данными
     try:
+        print('2')
         update_data = {'name': form.name.data}
 
         if form.password.data:
+            print('pp')
             if len(form.password.data) < 6:
                 flash('Пароль должен содержать минимум 6 символов', 'danger')
                 return render_template('main/profile.html', form=form)
             update_data['password_hash'] = generate_password_hash(form.password.data)
+
+        if form.name.data and (form.name.data != current_user.name):
+            print('nn')
+            update_data['name'] = form.name.data
+            print('update_data', update_data)
+
 
         # Обновляем данные в базе
         result = current_app.db.users.update_one(
