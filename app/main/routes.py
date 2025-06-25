@@ -27,11 +27,11 @@ def home():
 @login_required
 def profile_view():
     form = ProfileForm()
-
+    # print(current_user.__dict__)
     # Обработка GET-запроса или невалидной формы
     if not form.validate_on_submit():
         form.name.data = current_user.name  # Заполняем форму текущими данными
-        print(current_user.name)
+        # print(current_user.name)
         return render_template('main/profile.html', form=form)
 
     # Обработка POST-запроса с валидными данными

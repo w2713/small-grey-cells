@@ -11,6 +11,14 @@ class User(UserMixin):
         self.name = user_data.get('name', '')
         self.email = user_data['email']
         self.password_hash = user_data['password_hash']
+        self.created_at = user_data.get('created_at', datetime.utcnow())
+
+    @property
+    def formatted_created_at(self):
+        """Возвращает дату в формате 'дд.мм.гггг'"""
+        if self.created_at:
+            return self.created_at.strftime('%d.%m.%Y')
+        return 'N/A'
 
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
@@ -40,7 +48,7 @@ def create_user(db, name, email, password):
             'name': name,
             'email': email,
             'password_hash': password_hash,
-            'created_at': datetime.utcnow()
+            'created_at': datetime.utcnow()  # Явное сохранение даты
         })
         return str(result.inserted_id)
     except PyMongoError as e:

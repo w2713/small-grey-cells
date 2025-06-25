@@ -56,7 +56,7 @@
                 <div class="card-footer bg-light">
                     <div class="d-flex justify-content-between">
                         <small class="text-muted">
-                            Зарегистрирован: {{ current_user.created_at.strftime('%d.%m.%Y') if current_user.created_at else 'N/A' }}
+                            Зарегистрирован: {{ current_user.formatted_created_at }}
                         </small>
                         <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-danger">
                             Выйти
