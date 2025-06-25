@@ -5,20 +5,31 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Мои заметки</h1>
         <a href="{{ url_for('main.create_note') }}" class="btn btn-primary">
-            <i class="bi bi-plus-lg"></i> Создать заметку
+            <i class="bi bi-plus-lg me-1"></i> Создать заметку
         </a>
     </div>
+
+    {% if not notes %}
+    <div class="alert alert-info">
+        У вас пока нет заметок. Начните с создания новой заметки!
+    </div>
+    {% endif %}
 
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="notes-container">
         {% for note in notes %}
         <div class="col">
             <div class="card h-100 note-card" data-id="{{ note._id }}">
                 <div class="card-body">
-                    <h5 class="card-title">{{ note.title }}</h5>
-                    <div class="card-text mb-2">
-                        {{ note.content|truncate(100) }}
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h5 class="card-title mb-3">{{ note.title }}</h5>
+                        <button class="btn btn-sm btn-outline-danger delete-note" data-id="{{ note._id }}">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
-                    <div class="d-flex flex-wrap gap-1 mb-2">
+                    <div class="card-text mb-3 text-muted">
+                        {{ note.content|truncate(150) }}
+                    </div>
+                    <div class="d-flex flex-wrap gap-1 mb-3">
                         {% for tag in note.tags %}
                         <span class="badge bg-secondary">{{ tag }}</span>
                         {% endfor %}
@@ -26,19 +37,15 @@
                 </div>
                 <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between">
                     <small class="text-muted">
+                        <i class="bi bi-calendar me-1"></i>
                         {{ note.updated_at.strftime('%d.%m.%Y %H:%M') }}
                     </small>
-                    <div>
-                        <button class="btn btn-sm btn-outline-danger delete-note" data-id="{{ note._id }}">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
+                    <small class="text-muted">
+                        <i class="bi bi-clock-history me-1"></i>
+                        {{ note.created_at.strftime('%d.%m.%Y') }}
+                    </small>
                 </div>
             </div>
-        </div>
-        {% else %}
-        <div class="col-12">
-            <div class="alert alert-info">У вас пока нет заметок</div>
         </div>
         {% endfor %}
     </div>
@@ -48,39 +55,64 @@
 <div class="modal fade" id="noteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header bg-light">
                 <h5 class="modal-title">Редактирование заметки</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="noteForm">
-                    <input type="hidden" name="note_id" id="note_id">
-                    <div class="mb-3">
-                        <label for="title" class="form-label">Заголовок</label>
-                        <input type="text" class="form-control" id="title" name="title" required>
+                <div id="loadingIndicator" class="d-none text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
                     </div>
-                    <div class="mb-3">
-                        <label for="content" class="form-label">Содержание</label>
-                        <textarea class="form-control" id="content" name="content" rows="10" required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="tags" class="form-label">Теги</label>
-                        <select class="form-select" id="tags" name="tags" multiple>
-                            {% for tag in tags %}
-                            <option value="{{ tag }}">{{ tag }}</option>
-                            {% endfor %}
-                        </select>
-                        <small class="text-muted">Удерживайте Ctrl для выбора нескольких тегов</small>
-                    </div>
-                    <div class="mb-3">
-                        <label for="category" class="form-label">Категория</label>
-                        <input type="text" class="form-control" id="category" name="category">
-                    </div>
-                </form>
+                    <p class="mt-3">Загрузка заметки...</p>
+                </div>
+
+                <div id="noteFormContainer">
+                    <form id="noteForm">
+                        <input type="hidden" id="note_id" name="note_id">
+                        <div class="mb-4">
+                            <label for="title" class="form-label fw-bold">Заголовок *</label>
+                            <input type="text" class="form-control form-control-lg" id="title" name="title" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="content" class="form-label fw-bold">Содержание *</label>
+                            <textarea class="form-control" id="content" name="content" rows="12" required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label for="tags" class="form-label fw-bold">Теги</label>
+                                <select class="form-select" id="tags" name="tags" multiple size="5">
+                                    {% for tag in all_tags %}
+                                    <option value="{{ tag }}">{{ tag }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Удерживайте Ctrl (Cmd на Mac) для выбора нескольких тегов</small>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label for="category" class="form-label fw-bold">Категория</label>
+                                <input type="text" class="form-control" id="category" name="category">
+                                <div class="mt-3">
+                                    <label class="form-label fw-bold">Дата создания</label>
+                                    <div class="form-control-plaintext" id="createdAt"></div>
+                                </div>
+                                <div class="mt-2">
+                                    <label class="form-label fw-bold">Последнее изменение</label>
+                                    <div class="form-control-plaintext" id="updatedAt"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="errorContainer" class="d-none alert alert-danger"></div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
-                <button type="button" class="btn btn-primary" id="saveNoteBtn">Сохранить</button>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Закрыть
+                </button>
+                <button type="button" class="btn btn-primary" id="saveNoteBtn">
+                    <i class="bi bi-save me-1"></i> Сохранить
+                </button>
             </div>
         </div>
     </div>
@@ -88,73 +120,207 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+// Получаем CSRF токен из meta-тега
+function getCSRFToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.content : '';
+}
+
+// Глобальная переменная для CSRF токена
+const csrf_token = getCSRFToken();
+
 $(document).ready(function() {
+    // Переменная для хранения модального окна
+    const noteModal = new bootstrap.Modal(document.getElementById('noteModal'));
+
     // Открытие заметки в модальном окне
-    $('.note-card').click(function(e) {
-        if (!$(e.target).hasClass('delete-note')) {
+    $('.note-card').on('click', function(e) {
+        // Проверяем, не кликнули ли на кнопку удаления
+        if ($(e.target).closest('.delete-note').length === 0) {
             const noteId = $(this).data('id');
-            fetch(`/api/note/${noteId}`)
-                .then(response => response.json())
-                .then(note => {
-                    $('#note_id').val(note._id);
-                    $('#title').val(note.title);
-                    $('#content').val(note.content);
-                    $('#tags').val(note.tags);
-                    $('#category').val(note.category || '');
-                    $('#noteModal').modal('show');
-                });
+            openNoteForEditing(noteId);
         }
+    });
+
+    // Обработчик для кнопок удаления
+    $('.delete-note').on('click', function(e) {
+        e.stopPropagation();
+        const noteId = $(this).data('id');
+        const cardElement = $(this).closest('.col');
+        deleteNote(noteId, cardElement);
     });
 
     // Сохранение заметки
-    $('#saveNoteBtn').click(function() {
-        const formData = {
-            title: $('#title').val(),
-            content: $('#content').val(),
-            tags: $('#tags').val(),
-            category: $('#category').val(),
-            note_id: $('#note_id').val()
-        };
+    $('#saveNoteBtn').on('click', saveNote);
+});
 
-        fetch(`/note/${formData.note_id}/edit`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify(formData)
+function openNoteForEditing(noteId) {
+    // Показать индикатор загрузки
+    $('#loadingIndicator').removeClass('d-none');
+    $('#noteFormContainer').addClass('d-none');
+    $('#errorContainer').addClass('d-none').empty();
+
+    // Открыть модальное окно
+    const noteModal = new bootstrap.Modal(document.getElementById('noteModal'));
+    noteModal.show();
+
+    // Загрузить данные заметки
+    fetch(`/api/note/${noteId}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Заметка не найдена');
+            return response.json();
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Ошибка при сохранении');
+        .then(note => {
+            // Заполнить форму данными
+            $('#note_id').val(note._id);
+            $('#title').val(note.title);
+            $('#content').val(note.content);
+            $('#category').val(note.category || '');
+
+            // Установка тегов
+            const tagsSelect = $('#tags');
+            tagsSelect.val(note.tags);
+
+            // Даты
+            if (note.created_at) {
+                const createdDate = new Date(note.created_at);
+                $('#createdAt').text(createdDate.toLocaleString('ru-RU'));
             }
+
+            if (note.updated_at) {
+                const updatedDate = new Date(note.updated_at);
+                $('#updatedAt').text(updatedDate.toLocaleString('ru-RU'));
+            }
+
+            // Показать форму
+            $('#loadingIndicator').addClass('d-none');
+            $('#noteFormContainer').removeClass('d-none');
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки заметки:', error);
+
+            // Показать сообщение об ошибке
+            $('#loadingIndicator').addClass('d-none');
+            $('#errorContainer')
+                .removeClass('d-none')
+                .html(`<strong>Ошибка!</strong> Не удалось загрузить заметку: ${error.message}`);
         });
+}
+
+function saveNote() {
+    const noteId = $('#note_id').val();
+    const title = $('#title').val().trim();
+    const content = $('#content').val().trim();
+
+    // Простая валидация
+    if (!title) {
+        alert('Введите заголовок заметки');
+        return;
+    }
+
+    if (!content) {
+        alert('Введите содержание заметки');
+        return;
+    }
+
+    const noteData = {
+        title: title,
+        content: content,
+        tags: $('#tags').val() || [],
+        category: $('#category').val().trim() || ''
+    };
+
+    // Показать индикатор сохранения
+    const saveBtn = $('#saveNoteBtn');
+    const originalBtnHtml = saveBtn.html();
+    saveBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Сохранение...');
+
+    fetch(`/note/${noteId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrf_token
+        },
+        body: JSON.stringify(noteData)
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Ошибка сохранения');
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Закрыть модальное окно
+            const noteModal = bootstrap.Modal.getInstance(document.getElementById('noteModal'));
+            noteModal.hide();
+
+            // Обновить интерфейс
+            setTimeout(() => {
+                location.reload();
+            }, 300);
+        } else {
+            throw new Error(data.message || 'Ошибка при сохранении');
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка сохранения заметки:', error);
+        alert('Ошибка при сохранении: ' + error.message);
+    })
+    .finally(() => {
+        saveBtn.prop('disabled', false).html(originalBtnHtml);
     });
+}
 
-    // Удаление заметки
-    $('.delete-note').click(function(e) {
-        e.stopPropagation();
-        const noteId = $(this).data('id');
+function deleteNote(noteId, cardElement) {
+    if (!confirm('Вы уверены, что хотите удалить эту заметку? Это действие нельзя отменить.')) {
+        return;
+    }
 
-        if (confirm('Вы уверены, что хотите удалить эту заметку?')) {
-            fetch(`/note/${noteId}/delete`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token() }}'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    $(this).closest('.col').remove();
+    // Показать индикатор удаления
+    const deleteBtn = $(`.delete-note[data-id="${noteId}"]`);
+    const originalBtnHtml = deleteBtn.html();
+    deleteBtn.html('<span class="spinner-border spinner-border-sm"></span>');
+    deleteBtn.prop('disabled', true);
+
+    fetch(`/note/${noteId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-Token': csrf_token
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Ошибка удаления');
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Анимация удаления карточки
+            cardElement.fadeOut(300, function() {
+                $(this).remove();
+
+                // Проверить, остались ли заметки
+                if ($('#notes-container .col').length === 0) {
+                    $('#notes-container').html(`
+                        <div class="col-12">
+                            <div class="alert alert-info">У вас пока нет заметок</div>
+                        </div>
+                    `);
                 }
             });
+        } else {
+            throw new Error(data.message || 'Ошибка при удалении');
         }
+    })
+    .catch(error => {
+        console.error('Ошибка удаления заметки:', error);
+        alert('Ошибка при удалении: ' + error.message);
+    })
+    .finally(() => {
+        deleteBtn.html(originalBtnHtml);
+        deleteBtn.prop('disabled', false);
     });
-});
+}
 </script>
 {% endblock %}

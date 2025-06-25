@@ -4,6 +4,7 @@ from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 from config import Config
 import logging
+from flask_wtf.csrf import generate_csrf, CSRFProtect
 
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
@@ -18,6 +19,12 @@ def create_app():
 
     # Инициализация базы данных
     init_database(app)
+
+    csrf = CSRFProtect(app)
+    # csrf.init_app(app)
+    @app.context_processor
+    def inject_csrf_token():
+        return dict(generate_csrf=generate_csrf)
 
     login_manager.init_app(app)
 

@@ -1,5 +1,5 @@
 from bson import ObjectId
-from flask import Blueprint, render_template, redirect, url_for, flash, current_app, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, current_app, jsonify, request
 from flask_login import login_required, current_user, login_user
 from werkzeug.security import generate_password_hash
 
@@ -64,7 +64,8 @@ def profile_view():
 @login_required
 def notes():
     notes = Note.get_user_notes(current_app.db, current_user.id)
-    return render_template('main/notes.html', notes=notes)
+    all_tags = current_app.db.tags.distinct('name')
+    return render_template('main/notes.html', notes=notes, all_tags=all_tags)
 
 
 @bp.route('/note/create', methods=['GET', 'POST'])
@@ -135,30 +136,81 @@ def edit_note(note_id):
     return render_template('main/note_form.html', form=form, title='Редактировать заметку')
 
 
-@bp.route('/note/<note_id>/delete', methods=['POST'])
+@bp.route('/note/<note_id>', methods=['DELETE'])
 @login_required
 def delete_note(note_id):
-    note = Note.get_by_id(current_app.db, note_id)
-    if not note or str(note['user_id']) != current_user.id:
-        return jsonify({'success': False, 'message': 'Заметка не найдена'}), 404
+    try:
+        note = Note.get_by_id(current_app.db, note_id)
 
-    result = current_app.db.notes.delete_one({'_id': ObjectId(note_id)})
-    if result.deleted_count > 0:
-        return jsonify({'success': True})
-    return jsonify({'success': False}), 500
+        # Проверка прав доступа
+        if not note or str(note['user_id']) != current_user.id:
+            return jsonify({'success': False, 'message': 'Not found'}), 404
+
+        # Удаляем заметку
+        result = current_app.db.notes.delete_one({'_id': ObjectId(note_id)})
+        if result.deleted_count > 0:
+            return jsonify({'success': True})
+        return jsonify({'success': False}), 500
+    except Exception as e:
+        current_app.logger.error(f"Delete note error: {str(e)}")
+        return jsonify({'success': False}), 500
+
+
+@bp.route('/note/<note_id>', methods=['PUT'])
+@login_required
+def update_note(note_id):
+    try:
+        data = request.get_json()
+        note = Note.get_by_id(current_app.db, note_id)
+
+        # Проверка прав доступа
+        if not note or str(note['user_id']) != current_user.id:
+            return jsonify({'success': False, 'message': 'Not found'}), 404
+
+        # Обновляем теги: добавляем новые, если они есть
+        new_tags = data.get('tags', [])
+        existing_tags = current_app.db.tags.distinct('name')
+
+        for tag in new_tags:
+            if tag not in existing_tags:
+                current_app.db.tags.update_one(
+                    {'name': tag},
+                    {'$set': {'name': tag}},
+                    upsert=True
+                )
+
+        # Обновляем заметку
+        success = Note.update(
+            db=current_app.db,
+            note_id=note_id,
+            title=data.get('title'),
+            content=data.get('content'),
+            tags=new_tags,
+            category=data.get('category')
+        )
+
+        if success:
+            return jsonify({'success': True})
+        return jsonify({'success': False}), 500
+
+    except Exception as e:
+        current_app.logger.error(f"Edit note error: {str(e)}")
+        return jsonify({'success': False}), 500
 
 
 @bp.route('/api/note/<note_id>', methods=['GET'])
 @login_required
 def get_note(note_id):
     note = Note.get_by_id(current_app.db, note_id)
+
+    # Проверка прав доступа
     if not note or str(note['user_id']) != current_user.id:
         return jsonify({'error': 'Not found'}), 404
 
     # Преобразуем ObjectId и datetime для JSON
     note['_id'] = str(note['_id'])
     note['user_id'] = str(note['user_id'])
-    note['created_at'] = note['created_at'].isoformat()
-    note['updated_at'] = note['updated_at'].isoformat()
+    note['created_at'] = note['created_at'].isoformat() if note.get('created_at') else None
+    note['updated_at'] = note['updated_at'].isoformat() if note.get('updated_at') else None
 
     return jsonify(note)
