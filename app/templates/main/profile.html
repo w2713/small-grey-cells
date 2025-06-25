@@ -1,70 +1,80 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="mb-0">Профиль пользователя</h3>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('main.profile_view') }}">
-                        {{ form.hidden_tag() }}
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">Профиль пользователя</h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('main.profile_view') }}">
+                            {{ form.hidden_tag() }}
 
-                        <div class="mb-3 row">
-                            <label for="name" class="col-md-4 col-form-label text-md-end">Имя:</label>
-                            <div class="col-md-6">
-                                <input type="text" class="form-control" id="name" name="name"
-                                       value="{{ current_user.name }}" required>
+                            <div class="mb-3">
+                                {{ form.name.label(class="form-label") }}
+                                {{ form.name(class="form-control") }}
+                                {% for error in form.name.errors %}
+                                    <div class="invalid-feedback" style="display: block;">{{ error }}</div>
+                                {% endfor %}
                             </div>
-                        </div>
 
-                        <div class="mb-3 row">
-                            <label for="email" class="col-md-4 col-form-label text-md-end">Email:</label>
-                            <div class="col-md-6">
-                                <input type="email" class="form-control" id="email"
-                                       value="{{ current_user.email }}" disabled>
+                            <div class="mb-3 row">
+                                <label for="name" class="col-md-4 col-form-label text-md-end">Имя:</label>
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control" id="name" name="name"
+                                           value="{{ current_user.name }}" required>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="mb-3 row">
-                            <label for="password" class="col-md-4 col-form-label text-md-end">Новый пароль:</label>
-                            <div class="col-md-6">
-                                <input type="password" class="form-control" id="password" name="password">
-                                <small class="text-muted">Оставьте пустым, если не хотите менять</small>
+                            <div class="mb-3 row">
+                                <label for="email" class="col-md-4 col-form-label text-md-end">Email:</label>
+                                <div class="col-md-6">
+                                    <input type="email" class="form-control" id="email"
+                                           value="{{ current_user.email }}" disabled>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="mb-3 row">
-                            <label for="confirm_password" class="col-md-4 col-form-label text-md-end">Подтвердите пароль:</label>
-                            <div class="col-md-6">
-                                <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                            <div class="mb-3 row">
+                                <label for="password" class="col-md-4 col-form-label text-md-end">Новый пароль:</label>
+                                <div class="col-md-6">
+                                    <input type="password" class="form-control" id="password" name="password">
+                                    <small class="text-muted">Оставьте пустым, если не хотите менять</small>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="row mb-0">
-                            <div class="col-md-6 offset-md-4">
-                                <button type="submit" class="btn btn-primary">
-                                    Сохранить изменения
-                                </button>
+                            <div class="mb-3 row">
+                                <label for="confirm_password" class="col-md-4 col-form-label text-md-end">Подтвердите
+                                    пароль:</label>
+                                <div class="col-md-6">
+                                    <input type="password" class="form-control" id="confirm_password"
+                                           name="confirm_password">
+                                </div>
                             </div>
-                        </div>
-                    </form>
-                </div>
 
-                <div class="card-footer bg-light">
-                    <div class="d-flex justify-content-between">
-                        <small class="text-muted">
-                            Зарегистрирован: {{ current_user.formatted_created_at }}
-                        </small>
-                        <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-danger">
-                            Выйти
-                        </a>
+                            <div class="row mb-0">
+                                <div class="col-md-6 offset-md-4">
+                                    <button type="submit" class="btn btn-primary">
+                                        Сохранить изменения
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="card-footer bg-light">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">
+                                Зарегистрирован: {{ current_user.formatted_created_at }}
+                            </small>
+                            <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-danger">
+                                Выйти
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

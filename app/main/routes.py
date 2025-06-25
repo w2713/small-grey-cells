@@ -26,50 +26,34 @@ def home():
 @bp.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile_view():
-    form = ProfileForm()
-    # print(current_user.__dict__)
-    # Обработка GET-запроса или невалидной формы
-    if not form.validate_on_submit():
-        form.name.data = current_user.name  # Заполняем форму текущими данными
-        # print(current_user.name)
-        return render_template('main/profile.html', form=form)
+    form = ProfileForm(obj=current_user)  # Автозаполнение формы
 
-    # Обработка POST-запроса с валидными данными
-    try:
-        print('2')
-        update_data = {'name': form.name.data}
+    if form.validate_on_submit():
+        try:
+            update_data = {'name': form.name.data}
 
-        if form.password.data:
-            print('pp')
-            if len(form.password.data) < 6:
-                flash('Пароль должен содержать минимум 6 символов', 'danger')
-                return render_template('main/profile.html', form=form)
-            update_data['password_hash'] = generate_password_hash(form.password.data)
+            # Обновляем пароль только если он введён
+            if form.password.data:
+                update_data['password_hash'] = generate_password_hash(form.password.data)
+            print("Данные для обновления:", update_data)
+            # Выполняем обновление
+            result = current_app.db.users.update_one(
+                {'_id': ObjectId(current_user.id)},
+                {'$set': update_data}
+            )
+            print("Результат обновления:", result.raw_result)
+            if result.modified_count > 0:
+                # Обновляем данные в текущей сессии
+                updated_user = current_app.db.users.find_one({'_id': ObjectId(current_user.id)})
+                login_user(User(updated_user), remember=True)
+                flash('Профиль успешно обновлён!', 'success')
+            else:
+                flash('Данные не были изменены', 'info')
 
-        if form.name.data and (form.name.data != current_user.name):
-            print('nn')
-            update_data['name'] = form.name.data
-            print('update_data', update_data)
+            return redirect(url_for('main_bp.profile_view'))
 
+        except Exception as e:
+            current_app.logger.error(f"Ошибка обновления профиля: {str(e)}")
+            flash('Ошибка при обновлении профиля', 'danger')
 
-        # Обновляем данные в базе
-        result = current_app.db.users.update_one(
-            {'_id': ObjectId(current_user.id)},
-            {'$set': update_data}
-        )
-
-        if result.modified_count == 0:
-            flash('Данные не были изменены', 'info')
-            return redirect(url_for('main.profile_view'))
-
-        # Обновляем сессию пользователя
-        updated_user = current_app.db.users.find_one({'_id': ObjectId(current_user.id)})
-        login_user(User(updated_user), remember=True)
-
-        flash('Профиль успешно обновлен', 'success')
-        return redirect(url_for('main.profile_view'))
-
-    except Exception as e:
-        current_app.logger.error(f"Ошибка обновления профиля: {str(e)}")
-        flash('Произошла ошибка при обновлении профиля', 'danger')
-        return render_template('main/profile.html', form=form)
+    return render_template('main/profile.html', form=form)
