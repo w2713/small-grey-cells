@@ -32,3 +32,31 @@ body {
     font-size: 0.9rem;
     color: #6c757d !important;
 }
+
+/* Стили для карточек заметок */
+.note-card {
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #e0e0e0;
+}
+
+.note-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.card-footer {
+    background-color: rgba(0,0,0,0.03);
+}
+
+/* Стили для модального окна */
+.modal-fullscreen .modal-content {
+    border-radius: 0;
+    height: 100vh;
+}
+
+/* Стили для тегов */
+.badge {
+    margin-right: 5px;
+    margin-bottom: 5px;
+}

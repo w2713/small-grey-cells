@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField, SelectMultipleField
 from wtforms.validators import EqualTo, Length, DataRequired
 
 
@@ -12,6 +12,11 @@ class ProfileForm(FlaskForm):
     submit = SubmitField('Сохранить')
 
 
-
+class NoteForm(FlaskForm):
+    title = StringField('Заголовок', validators=[DataRequired()])
+    content = TextAreaField('Содержание', validators=[DataRequired()])
+    tags = SelectMultipleField('Теги', choices=[], coerce=str)
+    category = StringField('Категория')
+    submit = SubmitField('Сохранить')
 
 

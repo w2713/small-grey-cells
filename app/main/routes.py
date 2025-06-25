@@ -1,10 +1,11 @@
 from bson import ObjectId
-from flask import Blueprint, render_template, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, current_app, jsonify
 from flask_login import login_required, current_user, login_user
 from werkzeug.security import generate_password_hash
 
 from ..models import User
-from .forms import ProfileForm
+from .forms import ProfileForm, NoteForm
+from ..models.note import Note
 
 # Создаем Blueprint с уникальным именем
 bp = Blueprint('main', __name__, template_folder='templates/main')
@@ -57,3 +58,107 @@ def profile_view():
             flash('Ошибка при обновлении профиля', 'danger')
 
     return render_template('main/profile.html', form=form)
+
+
+@bp.route('/notes', methods=['GET'])
+@login_required
+def notes():
+    notes = Note.get_user_notes(current_app.db, current_user.id)
+    return render_template('main/notes.html', notes=notes)
+
+
+@bp.route('/note/create', methods=['GET', 'POST'])
+@login_required
+def create_note():
+    form = NoteForm()
+    # Заполняем теги из базы
+    form.tags.choices = [(tag, tag) for tag in current_app.db.tags.distinct('name')]
+
+    if form.validate_on_submit():
+        new_tags = [tag for tag in form.tags.data if tag not in form.tags.choices]
+
+        # Добавляем новые теги в базу
+        for tag in new_tags:
+            current_app.db.tags.update_one(
+                {'name': tag},
+                {'$set': {'name': tag}},
+                upsert=True
+            )
+
+        Note.create(
+            db=current_app.db,
+            title=form.title.data,
+            content=form.content.data,
+            user_id=current_user.id,
+            tags=form.tags.data,
+            category=form.category.data
+        )
+        flash('Заметка создана успешно!', 'success')
+        return redirect(url_for('main.notes'))
+
+    return render_template('main/note_form.html', form=form, title='Создать заметку')
+
+
+@bp.route('/note/<note_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_note(note_id):
+    note = Note.get_by_id(current_app.db, note_id)
+    if not note or str(note['user_id']) != current_user.id:
+        flash('Заметка не найдена', 'danger')
+        return redirect(url_for('main.notes'))
+
+    form = NoteForm(obj=note)
+    form.tags.choices = [(tag, tag) for tag in current_app.db.tags.distinct('name')]
+
+    if form.validate_on_submit():
+        new_tags = [tag for tag in form.tags.data if tag not in form.tags.choices]
+
+        # Добавляем новые теги в базу
+        for tag in new_tags:
+            current_app.db.tags.update_one(
+                {'name': tag},
+                {'$set': {'name': tag}},
+                upsert=True
+            )
+
+        Note.update(
+            db=current_app.db,
+            note_id=note_id,
+            title=form.title.data,
+            content=form.content.data,
+            tags=form.tags.data,
+            category=form.category.data
+        )
+        flash('Заметка обновлена успешно!', 'success')
+        return redirect(url_for('main.notes'))
+
+    return render_template('main/note_form.html', form=form, title='Редактировать заметку')
+
+
+@bp.route('/note/<note_id>/delete', methods=['POST'])
+@login_required
+def delete_note(note_id):
+    note = Note.get_by_id(current_app.db, note_id)
+    if not note or str(note['user_id']) != current_user.id:
+        return jsonify({'success': False, 'message': 'Заметка не найдена'}), 404
+
+    result = current_app.db.notes.delete_one({'_id': ObjectId(note_id)})
+    if result.deleted_count > 0:
+        return jsonify({'success': True})
+    return jsonify({'success': False}), 500
+
+
+@bp.route('/api/note/<note_id>', methods=['GET'])
+@login_required
+def get_note(note_id):
+    note = Note.get_by_id(current_app.db, note_id)
+    if not note or str(note['user_id']) != current_user.id:
+        return jsonify({'error': 'Not found'}), 404
+
+    # Преобразуем ObjectId и datetime для JSON
+    note['_id'] = str(note['_id'])
+    note['user_id'] = str(note['user_id'])
+    note['created_at'] = note['created_at'].isoformat()
+    note['updated_at'] = note['updated_at'].isoformat()
+
+    return jsonify(note)
