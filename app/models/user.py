@@ -75,12 +75,12 @@ def load_user(app, user_id):
 
 def update_user(db, user_id, update_data):
     try:
-        print("Данные для обновления:", update_data)
+
         result = db.users.update_one(
             {'_id': ObjectId(user_id)},
             {'$set': update_data}
         )
-        print("Результат обновления:", result.raw_result)
+
         return result.modified_count > 0
     except Exception as e:
         print(f"Update user error: {str(e)}")

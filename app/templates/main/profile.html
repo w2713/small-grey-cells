@@ -12,19 +12,14 @@
                         <form method="POST" action="{{ url_for('main.profile_view') }}">
                             {{ form.hidden_tag() }}
 
-                            <div class="mb-3">
-                                {{ form.name.label(class="form-label") }}
-                                {{ form.name(class="form-control") }}
-                                {% for error in form.name.errors %}
-                                    <div class="invalid-feedback" style="display: block;">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-
                             <div class="mb-3 row">
                                 <label for="name" class="col-md-4 col-form-label text-md-end">Имя:</label>
                                 <div class="col-md-6">
                                     <input type="text" class="form-control" id="name" name="name"
-                                           value="{{ current_user.name }}" required>
+                                           value="{{ form.name.data }}" required>
+                                    {% for error in form.name.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
                                 </div>
                             </div>
 

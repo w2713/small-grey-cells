@@ -27,21 +27,21 @@ def home():
 @login_required
 def profile_view():
     form = ProfileForm(obj=current_user)  # Автозаполнение формы
-
     if form.validate_on_submit():
         try:
             update_data = {'name': form.name.data}
-
-            # Обновляем пароль только если он введён
             if form.password.data:
+                if len(form.password.data) < 6:
+                    flash('Пароль должен быть не менее 6 символов', 'danger')
+                    return render_template('main/profile.html', form=form)
+
                 update_data['password_hash'] = generate_password_hash(form.password.data)
-            print("Данные для обновления:", update_data)
-            # Выполняем обновление
+
             result = current_app.db.users.update_one(
                 {'_id': ObjectId(current_user.id)},
                 {'$set': update_data}
             )
-            print("Результат обновления:", result.raw_result)
+
             if result.modified_count > 0:
                 # Обновляем данные в текущей сессии
                 updated_user = current_app.db.users.find_one({'_id': ObjectId(current_user.id)})
@@ -50,7 +50,7 @@ def profile_view():
             else:
                 flash('Данные не были изменены', 'info')
 
-            return redirect(url_for('main_bp.profile_view'))
+            return redirect(url_for('main.profile_view'))
 
         except Exception as e:
             current_app.logger.error(f"Ошибка обновления профиля: {str(e)}")
