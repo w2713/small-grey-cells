@@ -4,7 +4,7 @@ from pymongo.errors import PyMongoError
 
 class Note:
     @staticmethod
-    def create(db, title, content, user_id, tags=[], category=None):
+    def create(db, title, content, user_id, tags=[], category=None, attachments=[]):
         try:
             note_data = {
                 'title': title,
@@ -12,6 +12,7 @@ class Note:
                 'user_id': ObjectId(user_id),
                 'tags': tags,
                 'category': category,
+                'attachments': attachments,
                 'created_at': datetime.utcnow(),
                 'updated_at': datetime.utcnow()
             }
@@ -22,7 +23,7 @@ class Note:
             return None
 
     @staticmethod
-    def update(db, note_id, title, content, tags, category):
+    def update(db, note_id, title, content, tags, category, attachments):
         try:
             result = db.notes.update_one(
                 {'_id': ObjectId(note_id)},
@@ -31,6 +32,7 @@ class Note:
                     'content': content,
                     'tags': tags,
                     'category': category,
+                    'attachments': attachments,
                     'updated_at': datetime.utcnow()
                 }}
             )

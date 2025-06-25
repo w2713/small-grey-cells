@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, TextAreaField, SelectMultipleField
-from wtforms.validators import EqualTo, Length, DataRequired
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField, SelectMultipleField, FileField
+from wtforms.validators import EqualTo, DataRequired
 
 
 # Форма для профиля
@@ -17,6 +17,7 @@ class NoteForm(FlaskForm):
     content = TextAreaField('Содержание', validators=[DataRequired()])
     tags = SelectMultipleField('Теги', choices=[], coerce=str)
     category = StringField('Категория')
+    attachments = FileField('Вложения')
     submit = SubmitField('Сохранить')
 
 
