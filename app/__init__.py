@@ -1,3 +1,4 @@
+from bson import ObjectId
 from flask import Flask, render_template
 from flask_login import LoginManager
 from pymongo import MongoClient
@@ -70,3 +71,12 @@ def init_database(app):
     except (ConnectionFailure, ServerSelectionTimeoutError) as e:
         app.logger.error(f"MongoDB connection error: {str(e)}")
         app.db = None
+
+def get_existing_tags(db, user_id):
+    pipeline = [
+        {'$match': {'user_id': ObjectId(user_id)}},
+        {'$unwind': '$tags'},
+        {'$group': {'_id': '$tags', 'count': {'$sum': 1}}},
+        {'$sort': {'count': -1}}
+    ]
+    return [tag['_id'] for tag in db.notes.aggregate(pipeline)]

@@ -3,9 +3,10 @@ from flask import Blueprint, render_template, redirect, url_for, flash, current_
 from flask_login import login_required, current_user, login_user
 from werkzeug.security import generate_password_hash
 
+from .. import get_existing_tags
 from ..models import User
 from .forms import ProfileForm, NoteForm
-from ..models.note import Note, get_existing_tags
+from ..models.note import Note
 
 # Создаем Blueprint с уникальным именем
 bp = Blueprint('main', __name__, template_folder='templates/main')
@@ -17,7 +18,7 @@ def home():
             return render_template('errors/db_connection.html'), 500
 
         tag_filter = request.args.get('tag')
-        query = {'user_id': ObjectId(session['user_id'])}
+        query = {'user_id': ObjectId(current_user.id)}
 
         if tag_filter:
             query['tags'] = tag_filter
@@ -106,45 +107,44 @@ def create_note():
     return render_template('main/note_form.html', form=form, title='Создать заметку')
 
 
-@bp.route('/note/<note_id>/edit', methods=['GET', 'POST'])
-@login_required
-def edit_note(note_id):
-    note = Note.get_by_id(current_app.db, note_id)
-
-    if not note or str(note['user_id']) != current_user.id:
-        flash('Заметка не найдена', 'danger')
-        return redirect(url_for('main.notes'))
-
-    form = NoteForm(obj=note)
-    form.tags.choices = [(tag, tag) for tag in current_app.db.tags.distinct('name')]
-
-    if form.validate_on_submit():
-        # new_tags = [tag for tag in form.tags.data if tag not in form.tags.choices]
-        new_tags = [t.strip() for t in form.new_tags.data.split(',') if t.strip()]
-
-        existing_tags = form.tags.data
-
-        # Добавляем новые теги в базу
-        for tag in new_tags:
-            current_app.db.tags.update_one(
-                {'name': tag},
-                {'$set': {'name': tag}},
-                upsert=True
-            )
-
-        Note.update(
-            db=current_app.db,
-            note_id=note_id,
-            title=form.title.data,
-            content=form.content.data,
-            # tags=form.tags.data,
-            tags=list(set(existing_tags + new_tags)),
-            category=form.category.data
-        )
-        flash('Заметка обновлена успешно!', 'success')
-        return redirect(url_for('main.notes'))
-
-    return render_template('main/note_form.html', form=form, title='Редактировать заметку')
+# @bp.route('/note/<note_id>/edit', methods=['GET', 'POST'])
+# @login_required
+# def edit_note(note_id):
+#     note = Note.get_by_id(current_app.db, note_id)
+#
+#     if not note or str(note['user_id']) != current_user.id:
+#         flash('Заметка не найдена', 'danger')
+#         return redirect(url_for('main.notes'))
+#
+#     form = NoteForm(obj=note)
+#     form.tags.choices = [(tag, tag) for tag in current_app.db.tags.distinct('name')]
+#
+#     if form.validate_on_submit():
+#         new_tags = [t.strip() for t in form.new_tags.data.split(',') if t.strip()]
+#
+#         existing_tags = form.tags.data
+#
+#         # Добавляем новые теги в базу
+#         for tag in new_tags:
+#             current_app.db.tags.update_one(
+#                 {'name': tag},
+#                 {'$set': {'name': tag}},
+#                 upsert=True
+#             )
+#
+#         Note.update(
+#             db=current_app.db,
+#             note_id=note_id,
+#             title=form.title.data,
+#             content=form.content.data,
+#             # tags=form.tags.data,
+#             tags=list(set(existing_tags + new_tags)),
+#             category=form.category.data
+#         )
+#         flash('Заметка обновлена успешно!', 'success')
+#         return redirect(url_for('main.notes'))
+#
+#     return render_template('main/note_form.html', form=form, title='Редактировать заметку')
 
 
 @bp.route('/note/<note_id>', methods=['DELETE'])
@@ -233,18 +233,16 @@ def get_note(note_id):
 
 
 @bp.route('/tags')
+@login_required
 def tags_manager():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
 
-    tags = get_existing_tags(session['user_id'])
+    tags = get_existing_tags(current_app.db,ObjectId(current_user.id))
     return render_template('main/tags.html', tags=tags)
 
 
 @bp.route('/merge_tags', methods=['POST'])
+@login_required
 def merge_tags():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
 
     main_tag = request.form['main_tag']
     tags_to_merge = request.form.getlist('tags_to_merge')
@@ -257,11 +255,11 @@ def merge_tags():
 @bp.route('/delete_tag/<tag_name>', methods=['POST'])
 def delete_tag(tag_name):
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     # Удаляем тег из всех заметок
     current_app.db.notes.update_many(
-        {'user_id': ObjectId(session['user_id'])},
+        {'user_id': ObjectId(current_user.id)},
         {'$pull': {'tags': tag_name}}
     )
 
