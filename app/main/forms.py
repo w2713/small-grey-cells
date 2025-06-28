@@ -15,6 +15,7 @@ class ProfileForm(FlaskForm):
 class NoteForm(FlaskForm):
     title = StringField('Заголовок', validators=[DataRequired()])
     content = TextAreaField('Содержание', validators=[DataRequired()])
+    new_tags = StringField('Теги')
     tags = SelectMultipleField('Теги', choices=[], coerce=str)
     category = StringField('Категория')
     attachments = FileField('Вложения')

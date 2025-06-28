@@ -1,23 +1,11 @@
 from bson import ObjectId
-from flask import Blueprint, render_template, redirect, url_for, flash, current_app, jsonify, request, json
+from flask import Blueprint, render_template, redirect, url_for, flash, current_app, jsonify, request
 from flask_login import login_required, current_user, login_user
 from werkzeug.security import generate_password_hash
-import os
-import uuid
-from werkzeug.utils import secure_filename
-from flask import request, jsonify, current_app
 
 from ..models import User
 from .forms import ProfileForm, NoteForm
 from ..models.note import Note
-
-
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'mp3', 'wav', 'pdf', 'txt'}
-UPLOAD_FOLDER = 'app/static/uploads'
-
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Создаем Blueprint с уникальным именем
 bp = Blueprint('main', __name__, template_folder='templates/main')
@@ -86,10 +74,10 @@ def create_note():
     form = NoteForm()
     # Заполняем теги из базы
     form.tags.choices = [(tag, tag) for tag in current_app.db.tags.distinct('name')]
-
     if form.validate_on_submit():
-        new_tags = [tag for tag in form.tags.data if tag not in form.tags.choices]
+        new_tags = [t.strip() for t in form.new_tags.data.split(',') if t.strip()]
 
+        existing_tags = form.tags.data
         # Добавляем новые теги в базу
         for tag in new_tags:
             current_app.db.tags.update_one(
@@ -103,7 +91,7 @@ def create_note():
             title=form.title.data,
             content=form.content.data,
             user_id=current_user.id,
-            tags=form.tags.data,
+            tags=list(set(existing_tags + new_tags)),
             category=form.category.data
         )
         flash('Заметка создана успешно!', 'success')
@@ -116,6 +104,7 @@ def create_note():
 @login_required
 def edit_note(note_id):
     note = Note.get_by_id(current_app.db, note_id)
+
     if not note or str(note['user_id']) != current_user.id:
         flash('Заметка не найдена', 'danger')
         return redirect(url_for('main.notes'))
@@ -124,7 +113,10 @@ def edit_note(note_id):
     form.tags.choices = [(tag, tag) for tag in current_app.db.tags.distinct('name')]
 
     if form.validate_on_submit():
-        new_tags = [tag for tag in form.tags.data if tag not in form.tags.choices]
+        # new_tags = [tag for tag in form.tags.data if tag not in form.tags.choices]
+        new_tags = [t.strip() for t in form.new_tags.data.split(',') if t.strip()]
+
+        existing_tags = form.tags.data
 
         # Добавляем новые теги в базу
         for tag in new_tags:
@@ -139,7 +131,8 @@ def edit_note(note_id):
             note_id=note_id,
             title=form.title.data,
             content=form.content.data,
-            tags=form.tags.data,
+            # tags=form.tags.data,
+            tags=list(set(existing_tags + new_tags)),
             category=form.category.data
         )
         flash('Заметка обновлена успешно!', 'success')
@@ -172,52 +165,38 @@ def delete_note(note_id):
 @login_required
 def update_note(note_id):
     try:
+        data = request.get_json()
         note = Note.get_by_id(current_app.db, note_id)
 
         # Проверка прав доступа
         if not note or str(note['user_id']) != current_user.id:
             return jsonify({'success': False, 'message': 'Not found'}), 404
 
-        # Обработка вложений
-        attachments = []
-        if 'attachments' in request.files:
-            files = request.files.getlist('attachments')
-            for file in files:
-                if file and allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-                    unique_filename = f"{uuid.uuid4().hex}_{filename}"
-                    file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-                    file.save(file_path)
+        # Обновляем теги: добавляем новые, если они есть
+        new_tags = data.get('new_tags', [])
+        if new_tags:
+            new_tags = [t.strip() for t in new_tags.split(',') if t.strip()]
+            tags_to_save = list(set(data.get('tags') + new_tags))
+        else:
+            tags_to_save = data.get('tags')
 
-                    # Определяем тип файла
-                    if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
-                        file_type = 'image'
-                    elif filename.lower().endswith(('.mp4', '.mov', '.avi')):
-                        file_type = 'video'
-                    elif filename.lower().endswith(('.mp3', '.wav')):
-                        file_type = 'audio'
-                    else:
-                        file_type = 'file'
+        existing_tags = current_app.db.tags.distinct('name')
 
-                    attachments.append({
-                        'name': filename,
-                        'url': f"/static/uploads/{unique_filename}",
-                        'type': file_type
-                    })
-
-        # Сохраняем существующие + новые вложения
-        existing_attachments = note.get('attachments', [])
-        all_attachments = existing_attachments + attachments
-
+        for tag in new_tags:
+            if tag not in existing_tags:
+                current_app.db.tags.update_one(
+                    {'name': tag},
+                    {'$set': {'name': tag}},
+                    upsert=True
+                )
         # Обновляем заметку
         success = Note.update(
             db=current_app.db,
             note_id=note_id,
-            title=request.form.get('title'),
-            content=request.form.get('content'),
-            tags=json.loads(request.form.get('tags', '[]')),
-            category=request.form.get('category', ''),
-            attachments=all_attachments
+            title=data.get('title'),
+            content=data.get('content'),
+            tags=tags_to_save,
+            category=data.get('category')
         )
 
         if success:
@@ -227,6 +206,7 @@ def update_note(note_id):
     except Exception as e:
         current_app.logger.error(f"Edit note error: {str(e)}")
         return jsonify({'success': False}), 500
+
 
 @bp.route('/api/note/<note_id>', methods=['GET'])
 @login_required
