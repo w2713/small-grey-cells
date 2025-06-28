@@ -81,6 +81,11 @@
                         <div class="row">
                             <div class="col-md-6 mb-4">
                                 <label for="tags" class="form-label fw-bold">Теги</label>
+                                    <input type="text"
+                                       class="form-control"
+                                       id="new_tags"
+                                       name="new_tags"
+                                       placeholder="Введите теги через запятую">
                                 <select class="form-select" id="tags" name="tags" multiple size="5">
                                     {% for tag in all_tags %}
                                     <option value="{{ tag }}">{{ tag }}</option>
@@ -230,9 +235,10 @@ function saveNote() {
         title: title,
         content: content,
         tags: $('#tags').val() || [],
+        new_tags: $('#new_tags').val() || [],
         category: $('#category').val().trim() || ''
     };
-
+console.log(noteData)
     // Показать индикатор сохранения
     const saveBtn = $('#saveNoteBtn');
     const originalBtnHtml = saveBtn.html();

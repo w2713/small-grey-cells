@@ -31,6 +31,10 @@ def create_collections(db):
             for cat in default_categories:
                 db.categories.insert_one({'name': cat})
 
+        if db.tags.count_documents({}) == 0:
+            default_tags = ['Работа', 'Личное', 'Мысли', 'Идеи']
+            for ta in default_tags:
+                db.tags.insert_one({'name': ta})
         print("Database initialized successfully")
 
     except PyMongoError as e:

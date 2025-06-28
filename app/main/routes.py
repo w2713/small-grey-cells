@@ -74,10 +74,10 @@ def create_note():
     form = NoteForm()
     # Заполняем теги из базы
     form.tags.choices = [(tag, tag) for tag in current_app.db.tags.distinct('name')]
-
     if form.validate_on_submit():
-        new_tags = [tag for tag in form.tags.data if tag not in form.tags.choices]
+        new_tags = [t.strip() for t in form.new_tags.data.split(',') if t.strip()]
 
+        existing_tags = form.tags.data
         # Добавляем новые теги в базу
         for tag in new_tags:
             current_app.db.tags.update_one(
@@ -91,7 +91,7 @@ def create_note():
             title=form.title.data,
             content=form.content.data,
             user_id=current_user.id,
-            tags=form.tags.data,
+            tags=list(set(existing_tags + new_tags)),
             category=form.category.data
         )
         flash('Заметка создана успешно!', 'success')
@@ -104,6 +104,7 @@ def create_note():
 @login_required
 def edit_note(note_id):
     note = Note.get_by_id(current_app.db, note_id)
+
     if not note or str(note['user_id']) != current_user.id:
         flash('Заметка не найдена', 'danger')
         return redirect(url_for('main.notes'))
@@ -112,7 +113,10 @@ def edit_note(note_id):
     form.tags.choices = [(tag, tag) for tag in current_app.db.tags.distinct('name')]
 
     if form.validate_on_submit():
-        new_tags = [tag for tag in form.tags.data if tag not in form.tags.choices]
+        # new_tags = [tag for tag in form.tags.data if tag not in form.tags.choices]
+        new_tags = [t.strip() for t in form.new_tags.data.split(',') if t.strip()]
+
+        existing_tags = form.tags.data
 
         # Добавляем новые теги в базу
         for tag in new_tags:
@@ -127,7 +131,8 @@ def edit_note(note_id):
             note_id=note_id,
             title=form.title.data,
             content=form.content.data,
-            tags=form.tags.data,
+            # tags=form.tags.data,
+            tags=list(set(existing_tags + new_tags)),
             category=form.category.data
         )
         flash('Заметка обновлена успешно!', 'success')
@@ -168,7 +173,13 @@ def update_note(note_id):
             return jsonify({'success': False, 'message': 'Not found'}), 404
 
         # Обновляем теги: добавляем новые, если они есть
-        new_tags = data.get('tags', [])
+        new_tags = data.get('new_tags', [])
+        if new_tags:
+            new_tags = [t.strip() for t in new_tags.split(',') if t.strip()]
+            tags_to_save = list(set(data.get('tags') + new_tags))
+        else:
+            tags_to_save = data.get('tags')
+
         existing_tags = current_app.db.tags.distinct('name')
 
         for tag in new_tags:
@@ -178,14 +189,13 @@ def update_note(note_id):
                     {'$set': {'name': tag}},
                     upsert=True
                 )
-
         # Обновляем заметку
         success = Note.update(
             db=current_app.db,
             note_id=note_id,
             title=data.get('title'),
             content=data.get('content'),
-            tags=new_tags,
+            tags=tags_to_save,
             category=data.get('category')
         )
 
