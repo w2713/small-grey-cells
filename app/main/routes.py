@@ -1,11 +1,11 @@
 from bson import ObjectId
-from flask import Blueprint, render_template, redirect, url_for, flash, current_app, jsonify, request
+from flask import Blueprint, render_template, redirect, url_for, flash, current_app, jsonify, request, session
 from flask_login import login_required, current_user, login_user
 from werkzeug.security import generate_password_hash
 
 from ..models import User
 from .forms import ProfileForm, NoteForm
-from ..models.note import Note
+from ..models.note import Note, get_existing_tags
 
 # Создаем Blueprint с уникальным именем
 bp = Blueprint('main', __name__, template_folder='templates/main')
@@ -15,6 +15,12 @@ def home():
     try:
         if current_app.db is None:
             return render_template('errors/db_connection.html'), 500
+
+        tag_filter = request.args.get('tag')
+        query = {'user_id': ObjectId(session['user_id'])}
+
+        if tag_filter:
+            query['tags'] = tag_filter
 
         notes = list(current_app.db.notes.find().sort('created_at', -1).limit(5))
         return render_template('main/home.html', notes=notes)
@@ -224,3 +230,40 @@ def get_note(note_id):
     note['updated_at'] = note['updated_at'].isoformat() if note.get('updated_at') else None
 
     return jsonify(note)
+
+
+@bp.route('/tags')
+def tags_manager():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    tags = get_existing_tags(session['user_id'])
+    return render_template('main/tags.html', tags=tags)
+
+
+@bp.route('/merge_tags', methods=['POST'])
+def merge_tags():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    main_tag = request.form['main_tag']
+    tags_to_merge = request.form.getlist('tags_to_merge')
+
+    # Удаляем основной тег из списка для объединения
+    if main_tag in tags_to_merge:
+        tags_to_merge.remove(main_tag)
+
+
+@bp.route('/delete_tag/<tag_name>', methods=['POST'])
+def delete_tag(tag_name):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    # Удаляем тег из всех заметок
+    current_app.db.notes.update_many(
+        {'user_id': ObjectId(session['user_id'])},
+        {'$pull': {'tags': tag_name}}
+    )
+
+    flash(f'Тег "{tag_name}" успешно удален!', 'success')
+    return redirect(url_for('tags_manager'))

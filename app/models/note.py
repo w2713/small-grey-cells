@@ -73,3 +73,11 @@ def create_note(db, title, content, user_id, tags=[], category=None):
         print(f"Note creation error: {str(e)}")
         return None
 
+def get_existing_tags(db, user_id):
+    pipeline = [
+        {'$match': {'user_id': ObjectId(user_id)}},
+        {'$unwind': '$tags'},
+        {'$group': {'_id': '$tags', 'count': {'$sum': 1}}},
+        {'$sort': {'count': -1}}
+    ]
+    return [tag['_id'] for tag in db.notes.aggregate(pipeline)]

@@ -60,3 +60,24 @@ body {
     margin-right: 5px;
     margin-bottom: 5px;
 }
+
+.tag-cloud {
+    line-height: 2.5;
+}
+
+.tag {
+    background: #f0f0f0;
+    padding: 3px 8px;
+    border-radius: 3px;
+    margin: 2px;
+    display: inline-block;
+}
+
+.tag.active {
+    background: #007bff;
+    color: white;
+}
+
+.badge {
+    margin-right: 5px;
+}
