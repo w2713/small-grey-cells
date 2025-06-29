@@ -5,7 +5,7 @@ from werkzeug.security import generate_password_hash
 
 from .. import get_existing_tags
 from ..models import User
-from .forms import ProfileForm, NoteForm
+from .forms import ProfileForm, NoteForm, CSRFProtectionForm
 from ..models.note import Note
 
 # Создаем Blueprint с уникальным именем
@@ -236,8 +236,9 @@ def get_note(note_id):
 @login_required
 def tags_manager():
 
-    tags = get_existing_tags(current_app.db,ObjectId(current_user.id))
-    return render_template('main/tags.html', tags=tags)
+    tags = get_existing_tags(current_app.db, current_user.id)
+    form = CSRFProtectionForm()  # Создаем экземпляр формы
+    return render_template('main/tags.html', tags=tags, form=form)
 
 
 @bp.route('/merge_tags', methods=['POST'])

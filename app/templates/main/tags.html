@@ -11,6 +11,7 @@
         </div>
         <div class="card-body">
             <form action="{{ url_for('main.merge_tags') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label for="main_tag">Основной тег:</label>
                     <select class="form-control" id="main_tag" name="main_tag" required>
@@ -59,6 +60,7 @@
                         {{ tag }}
                     </span>
                     <form action="{{ url_for('main.delete_tag', tag_name=tag) }}" method="POST"
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                           onsubmit="return confirm('Удалить тег \'{{ tag }}\' из всех заметок?')">
                         <button type="submit" class="btn btn-sm btn-danger">
                             <i class="fas fa-trash-alt"></i> Удалить

@@ -22,7 +22,7 @@ def create_app():
     init_database(app)
 
     csrf = CSRFProtect(app)
-    # csrf.init_app(app)
+    csrf.init_app(app)
     @app.context_processor
     def inject_csrf_token():
         return dict(generate_csrf=generate_csrf)

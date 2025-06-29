@@ -21,3 +21,6 @@ class NoteForm(FlaskForm):
     submit = SubmitField('Сохранить')
 
 
+class CSRFProtectionForm(FlaskForm):
+    """Пустая форма только для CSRF-токена"""
+    pass
