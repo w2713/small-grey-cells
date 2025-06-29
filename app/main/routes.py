@@ -244,7 +244,6 @@ def tags_manager():
 @bp.route('/merge_tags', methods=['POST'])
 @login_required
 def merge_tags():
-
     main_tag = request.form['main_tag']
     tags_to_merge = request.form.getlist('tags_to_merge')
 
@@ -252,11 +251,37 @@ def merge_tags():
     if main_tag in tags_to_merge:
         tags_to_merge.remove(main_tag)
 
+    if tags_to_merge:
+        # 1. Добавляем основной тег ко всем заметкам, содержащим теги для объединения
+        current_app.db.notes.update_many(
+            {
+                'user_id': ObjectId(current_user.id),
+                'tags': {'$in': tags_to_merge}
+            },
+            {'$addToSet': {'tags': main_tag}}  # Используем $addToSet для избежания дубликатов
+        )
+
+        # 2. Удаляем объединяемые теги из всех заметок
+        current_app.db.notes.update_many(
+            {
+                'user_id': ObjectId(current_user.id),
+                'tags': {'$in': tags_to_merge}
+            },
+            {'$pullAll': {'tags': tags_to_merge}}
+        )
+
+        flash(f'Теги {", ".join(tags_to_merge)} объединены в "{main_tag}"!', 'success')
+    else:
+        flash('Не выбраны теги для объединения', 'warning')
+
+    return redirect(url_for('main.tags_manager'))
 
 @bp.route('/delete_tag/<tag_name>', methods=['POST'])
+@login_required
 def delete_tag(tag_name):
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
+
+    from urllib.parse import unquote
+    decoded_tag = unquote(tag_name)
 
     # Удаляем тег из всех заметок
     current_app.db.notes.update_many(
@@ -265,4 +290,4 @@ def delete_tag(tag_name):
     )
 
     flash(f'Тег "{tag_name}" успешно удален!', 'success')
-    return redirect(url_for('tags_manager'))
+    return redirect(url_for('main.tags_manager'))
