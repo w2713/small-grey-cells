@@ -14,7 +14,19 @@
         У вас пока нет заметок. Начните с создания новой заметки!
     </div>
     {% endif %}
-
+<div class="mb-4">
+    <strong>Фильтр по тегам:</strong>
+    <a href="{{ url_for('main.notes') }}"
+       class="badge bg-secondary {% if not current_tag %}active{% endif %}">
+        Все
+    </a>
+    {% for tag in all_tags %}
+        <a href="{{ url_for('main.notes', tag=tag) }}"
+           class="badge bg-primary {% if tag == current_tag %}active{% endif %}">
+            {{ tag }}
+        </a>
+    {% endfor %}
+</div>
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="notes-container">
         {% for note in notes %}
         <div class="col">

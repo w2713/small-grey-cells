@@ -73,3 +73,9 @@ class Note:
     #         print(f"Note creation error: {str(e)}")
     #         return None
 
+    @classmethod
+    def get_user_notes_by_tag(cls, db, user_id, tag):
+        return list(db.notes.find({
+            'user_id': ObjectId(user_id),
+            'tags': tag
+        }))

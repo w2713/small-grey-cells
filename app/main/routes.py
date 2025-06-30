@@ -10,6 +10,8 @@ from ..models import User
 from .forms import ProfileForm, NoteForm, CSRFProtectionForm
 from ..models.note import Note
 from ..utils.utils import get_existing_tags
+from flask_paginate import Pagination, get_page_args
+
 
 # Создаем Blueprint с уникальным именем
 bp = Blueprint('main', __name__, template_folder='templates/main')
@@ -74,9 +76,16 @@ def profile_view():
 @bp.route('/notes', methods=['GET'])
 @login_required
 def notes():
-    notes = Note.get_user_notes(current_app.db, current_user.id)
+    page, per_page, offset = get_page_args()
+    tag_filter = request.args.get('tag')
+    all_notes = Note.get_user_notes(current_app.db, current_user.id)
+    # Фильтруем заметки по тегу, если указан фильтр
+    if tag_filter:
+        notes = Note.get_user_notes_by_tag(current_app.db, current_user.id, tag_filter)
+    else:
+        notes = Note.get_user_notes(current_app.db, current_user.id)
     all_tags = current_app.db.tags.distinct('name')
-    return render_template('main/notes.html', notes=notes, all_tags=all_tags)
+    return render_template('main/notes.html', notes=notes, all_tags=all_tags, current_tag=tag_filter)
 
 
 @bp.route('/note/create', methods=['GET', 'POST'])
