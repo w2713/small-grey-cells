@@ -73,6 +73,7 @@ def init_database(app):
         app.db = None
 
 def get_existing_tags(db, user_id):
+    print(db)
     pipeline = [
         {'$match': {'user_id': ObjectId(user_id)}},
         {'$unwind': '$tags'},
