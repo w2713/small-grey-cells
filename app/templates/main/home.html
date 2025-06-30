@@ -33,7 +33,14 @@
             <div class="card">
                 <div class="card-header">Облако тегов</div>
                 <div class="card-body">
-                    <!-- Теги будут динамически подгружаться -->
+                    <div class="tag-cloud mb-4">
+                        {% for tag in get_existing_tags(current_app.db, current_user.id) %}
+                            <a href="{{ url_for('index', tag=tag) }}"
+                               class="tag {% if tag == current_tag %}active{% endif %}">
+                                {{ tag }}
+                            </a>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>

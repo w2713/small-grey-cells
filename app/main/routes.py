@@ -1,3 +1,6 @@
+import logging
+
+import pymongo
 from bson import ObjectId
 from flask import Blueprint, render_template, redirect, url_for, flash, current_app, jsonify, request, session
 from flask_login import login_required, current_user, login_user
@@ -250,31 +253,39 @@ def merge_tags():
     # Удаляем основной тег из списка для объединения
     if main_tag in tags_to_merge:
         tags_to_merge.remove(main_tag)
+    try:
+        if tags_to_merge:
+            # 1. Добавляем основной тег ко всем заметкам, содержащим теги для объединения
+            current_app.db.notes.update_many(
+                {
+                    'user_id': ObjectId(current_user.id),
+                    'tags': {'$in': tags_to_merge}
+                },
+                {'$addToSet': {'tags': main_tag}}  # Используем $addToSet для избежания дубликатов
+            )
 
-    if tags_to_merge:
-        # 1. Добавляем основной тег ко всем заметкам, содержащим теги для объединения
-        current_app.db.notes.update_many(
-            {
-                'user_id': ObjectId(current_user.id),
-                'tags': {'$in': tags_to_merge}
-            },
-            {'$addToSet': {'tags': main_tag}}  # Используем $addToSet для избежания дубликатов
-        )
+            # 2. Удаляем объединяемые теги из всех заметок
+            current_app.db.notes.update_many(
+                {
+                    'user_id': ObjectId(current_user.id),
+                    'tags': {'$in': tags_to_merge}
+                },
+                {'$pullAll': {'tags': tags_to_merge}}
+            )
 
-        # 2. Удаляем объединяемые теги из всех заметок
-        current_app.db.notes.update_many(
-            {
-                'user_id': ObjectId(current_user.id),
-                'tags': {'$in': tags_to_merge}
-            },
-            {'$pullAll': {'tags': tags_to_merge}}
-        )
+            flash(f'Теги {", ".join(tags_to_merge)} объединены в "{main_tag}"!', 'success')
+        else:
+            flash('Не выбраны теги для объединения', 'warning')
 
-        flash(f'Теги {", ".join(tags_to_merge)} объединены в "{main_tag}"!', 'success')
-    else:
-        flash('Не выбраны теги для объединения', 'warning')
+    except pymongo.errors.PyMongoError as e:
+        logging.error(f"Database error during tag merge: {str(e)}")
+        flash('Произошла ошибка при объединении тегов. Пожалуйста, попробуйте снова.', 'danger')
+    except Exception as e:
+        logging.exception("Unexpected error during tag merge")
+        flash('Непредвиденная ошибка. Пожалуйста, обратитесь к администратору.', 'danger')
+    finally:
 
-    return redirect(url_for('main.tags_manager'))
+        return redirect(url_for('main.tags_manager'))
 
 @bp.route('/delete_tag/<tag_name>', methods=['POST'])
 @login_required
