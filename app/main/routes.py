@@ -6,10 +6,10 @@ from flask import Blueprint, render_template, redirect, url_for, flash, current_
 from flask_login import login_required, current_user, login_user
 from werkzeug.security import generate_password_hash
 
-from .. import get_existing_tags
 from ..models import User
 from .forms import ProfileForm, NoteForm, CSRFProtectionForm
 from ..models.note import Note
+from ..utils.utils import get_existing_tags
 
 # Создаем Blueprint с уникальным именем
 bp = Blueprint('main', __name__, template_folder='templates/main')
@@ -26,8 +26,9 @@ def home():
         if tag_filter:
             query['tags'] = tag_filter
 
+        existing_tags = get_existing_tags(current_user.id)
         notes = list(current_app.db.notes.find().sort('created_at', -1).limit(5))
-        return render_template('main/home.html', notes=notes)
+        return render_template('main/home.html', notes=notes, existing_tags=existing_tags)
 
     except Exception as e:
         current_app.logger.error(f"Database error: {str(e)}")
@@ -239,7 +240,7 @@ def get_note(note_id):
 @login_required
 def tags_manager():
 
-    tags = get_existing_tags(current_app.db, current_user.id)
+    tags = get_existing_tags(current_user.id)
     form = CSRFProtectionForm()  # Создаем экземпляр формы
     return render_template('main/tags.html', tags=tags, form=form)
 

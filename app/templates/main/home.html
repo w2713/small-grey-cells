@@ -34,8 +34,8 @@
                 <div class="card-header">Облако тегов</div>
                 <div class="card-body">
                     <div class="tag-cloud mb-4">
-                        {% for tag in get_existing_tags(current_app.db, current_user.id) %}
-                            <a href="{{ url_for('index', tag=tag) }}"
+                        {% for tag in existing_tags %}
+                            <a href="{{ url_for('main.notes', tag=tag) }}"
                                class="tag {% if tag == current_tag %}active{% endif %}">
                                 {{ tag }}
                             </a>
